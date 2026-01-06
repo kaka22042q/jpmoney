@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>🐾 2035 日本環島存款大作戰</title>
+    <style>
+        :root { 
+            --cat-main: #FFB7B2; --cat-bg: #fffaf0; --cat-dark: #5D4037; 
+            --cat-gray: #D7CCC8; --cat-red: #ff7675; --cat-green: #55efc4; 
+            --cat-blue: #74b9ff; --cat-yellow: #ffeaa7; --accent: #FF748C;
+        }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; font-family: -apple-system, "Microsoft JhengHei", sans-serif; }
+        body { background-color: var(--cat-bg); color: var(--cat-dark); margin: 0; padding: 0 0 120px 0; }
+        .container { max-width: 480px; margin: 0 auto; padding: 15px; }
+        
+        .cat-card { background: #ffffff; border: 2.5px solid var(--cat-dark); box-shadow: 4px 4px 0px var(--cat-dark); border-radius: 20px; margin-bottom: 15px; padding: 15px; position: relative; }
+        .prog-container { background: #eee; height: 22px; border-radius: 11px; border: 2px solid var(--cat-dark); overflow: hidden; margin: 8px 0; position: relative; }
+        .prog-fill { height: 100%; transition: width 0.8s ease; background: var(--cat-main); }
+        .prog-text { position: absolute; width: 100%; text-align: center; font-size: 11px; font-weight: 900; line-height: 18px; z-index: 5; color: var(--cat-dark); text-shadow: 1px 1px 0px rgba(255,255,255,0.5); }
+        
+        .nav-bar { position: fixed; bottom: 15px; left: 15px; right: 15px; background: white; border: 3px solid var(--cat-dark); display: flex; justify-content: space-around; padding: 10px; z-index: 1000; border-radius: 20px; box-shadow: 0 5px 0 var(--cat-gray); }
+        .nav-item { border: none; background: none; flex: 1; display: flex; flex-direction: column; align-items: center; cursor: pointer; color: var(--cat-gray); }
+        .nav-item.active { color: var(--cat-dark); }
+        .nav-icon { font-size: 24px; }
+        .nav-text { font-size: 10px; font-weight: bold; }
+
+        .page { display: none; animation: fadeIn 0.2s ease; }
+        .page.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        input, select, textarea { width: 100%; padding: 12px; border: 2.2px solid var(--cat-gray); border-radius: 12px; outline: none; font-size: 14px; background: white; }
+        textarea { height: 120px; resize: none; line-height: 1.5; }
+        .btn-main { background: var(--cat-main); border: 2.5px solid var(--cat-dark); box-shadow: 0 4px 0px var(--cat-dark); font-weight: bold; color: white; border-radius: 15px; padding: 15px; width: 100%; font-size: 16px; cursor: pointer; margin-top: 10px; }
+        
+        .rolling-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #eee; }
+        .budget-box { background: #fdfcf0; border: 1.5px solid #d4c4a8; border-radius: 15px; padding: 12px; margin-bottom: 10px; }
+        .budget-title { font-weight: bold; font-size: 14px; margin-bottom: 5px; display: flex; justify-content: space-between; }
+        .budget-detail { display: grid; grid-template-columns: 1fr 1fr; font-size: 11px; color: #7a6e5a; gap: 5px; }
+        .budget-result { grid-column: span 2; border-top: 1px dashed #d4c4a8; margin-top: 5px; padding-top: 5px; display: flex; justify-content: space-between; align-items: center; }
+        .allowance-amt { font-size: 18px; font-weight: 900; }
+        .pos { color: var(--cat-green); }
+        .neg { color: var(--cat-red); }
+
+        .log-item { background: #f9f9f9; border-left: 5px solid var(--cat-blue); padding: 12px; margin-bottom: 10px; border-radius: 0 15px 15px 0; position: relative; }
+        .log-header { display: flex; justify-content: space-between; font-weight: bold; padding-right: 30px; }
+        .log-note { color: #666; font-size: 12px; white-space: pre-wrap; margin-top: 8px; border-top: 1px dashed #ddd; padding-top: 8px; }
+        .log-del { position: absolute; top: 12px; right: 10px; color: #ccc; border: none; background: none; font-size: 18px; cursor: pointer; padding: 0 5px; }
+        .log-del:hover { color: var(--cat-red); }
+
+        .no-result { text-align: center; color: #bbb; padding: 30px 10px; font-style: italic; }
+
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 2000; justify-content: center; align-items: center; backdrop-filter: blur(2px); }
+        .modal-content { background: white; width: 90%; max-height: 90vh; overflow-y: auto; padding: 20px; border-radius: 25px; border: 3px solid var(--cat-dark); }
+    </style>
+</head>
+<body>
+
+<div id="settingsModal" class="modal">
+    <div class="modal-content">
+        <h3>⚙️ 目標設定</h3>
+        <label>匯率 (1 JPY = ? TWD)</label><input type="number" id="set_rate" step="0.001" style="margin-bottom:15px;">
+        <label>年度台幣目標 ($)</label><input type="number" id="set_t1_goal" style="margin-bottom:10px;">
+        <label>年度日幣目標 (¥)</label><input type="number" id="set_j1_goal" style="margin-bottom:15px;">
+        <button onclick="updateSettings()" class="btn-main">儲存設定</button>
+        <button onclick="closeModal('settingsModal')" style="background:none; border:none; width:100%; margin-top:10px; color:gray;">取消</button>
+    </div>
+</div>
+
+<div id="tripModal" class="modal">
+    <div class="modal-content">
+        <h3>📅 開啟新行程記帳本</h3>
+        <input type="text" id="nt_name" placeholder="行程名稱 (如: 90天環島挑戰)" style="margin-bottom:10px;">
+        <div style="display:flex; gap:5px; margin-bottom:15px;"><input type="date" id="nt_start"><input type="date" id="nt_end"></div>
+        <p style="font-size:12px; font-weight:bold;">💰 日幣分項總預算：</p>
+        <div style="display:grid; gap:8px;">
+            <div style="display:flex; align-items:center; gap:8px;"><span>🍽️</span><input type="number" class="cat-goal" data-cat="飲食" placeholder="飲食總額"></div>
+            <div style="display:flex; align-items:center; gap:8px;"><span>🏠</span><input type="number" class="cat-goal" data-cat="住宿" placeholder="住宿總額"></div>
+            <div style="display:flex; align-items:center; gap:8px;"><span>🚃</span><input type="number" class="cat-goal" data-cat="交通" placeholder="交通總額"></div>
+            <div style="display:flex; align-items:center; gap:8px;"><span>🛍️</span><input type="number" class="cat-goal" data-cat="購物" placeholder="購物總額"></div>
+            <div style="display:flex; align-items:center; gap:8px;"><span>🌀</span><input type="number" class="cat-goal" data-cat="其他" placeholder="其他總額"></div>
+        </div>
+        <button onclick="saveNewTrip()" class="btn-main">確認建立行程</button>
+        <button onclick="closeModal('tripModal')" style="background:none; border:none; width:100%; margin-top:10px; color:gray;">取消</button>
+    </div>
+</div>
+
+<div class="container">
+    <div id="page-home" class="page active">
+        <div style="display: flex; justify-content: space-between; align-items: center;"><h1 style="color: var(--accent); margin: 10px 0;">🐾 夢想存款大作戰</h1><button onclick="openModal('settingsModal')" style="background:none; border:none; font-size: 22px;">⚙️</button></div>
+        <div class="cat-card" style="background: var(--cat-dark); color: white; text-align: center;">
+            <div id="totalAssets" style="font-size: 28px; font-weight: 900; color: var(--cat-yellow); text-align:center;">$ --</div>
+            <div style="font-size: 11px; margin-top: 8px; display:flex; justify-content:space-between; padding:0 10px;">
+                <span>剩餘 <strong id="mLeft">--</strong> 月</span><span>匯率 1: <strong id="showRate">--</strong></span>
+            </div>
+        </div>
+        <div id="jarList"></div>
+        
+        <div class="cat-card" style="background: var(--cat-yellow);">
+            <h3 style="margin:0 0 10px 0">🍼 餵食存款罐</h3>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                <div><small>年度台幣 ($)</small><input type="number" id="in_t1" placeholder="0"></div>
+                <div><small>年度日幣 (¥)</small><input type="number" id="in_j1" placeholder="0"></div>
+                <div><small>環島ibrain ($)</small><input type="number" id="in_t2" placeholder="0"></div>
+                <div><small>環島現鈔 (¥)</small><input type="number" id="in_j2" placeholder="0"></div>
+            </div>
+            <button onclick="saveSavings()" class="btn-main">確認存入 🐟</button>
+        </div>
+        
+        <div style="display:flex; gap:10px; margin-top:10px;">
+            <button onclick="exportData()" style="flex:1; padding:10px; border-radius:15px; border:2px solid var(--cat-dark); background:#fff; font-size:12px; font-weight:bold;">📦 匯出備份</button>
+            <button onclick="document.getElementById('importFile').click()" style="flex:1; padding:10px; border-radius:15px; border:2px solid var(--cat-dark); background:#fff; font-size:12px; font-weight:bold;">📥 匯入備份</button>
+            <input type="file" id="importFile" style="display:none" onchange="importData(event)">
+        </div>
+    </div>
+
+    <div id="page-trips" class="page">
+        <h2 class="text-center" style="color:var(--cat-blue)">📅 行程預算日誌</h2>
+        <div style="margin-bottom:15px;">
+            <select id="view-trip-select" onchange="renderTripLog()" style="margin-bottom:10px;"></select>
+            <input type="text" id="log-search" oninput="renderTripLog()" placeholder="🔍 搜尋記帳備註或分類...">
+        </div>
+        <div id="active-trip-status"></div>
+        <div id="active-trip-logs"></div>
+        <button class="btn-main" onclick="openModal('tripModal')" style="background:var(--cat-blue);">+ 新增行程記帳本</button>
+    </div>
+
+    <div id="page-budget" class="page">
+        <h2 class="text-center">🗾 環島規劃 (全日幣)</h2>
+        <div class="cat-card" id="budgetList"></div>
+        <div class="cat-card">
+            <h3>+ 新增項目 (¥)</h3>
+            <input type="text" id="b-name" placeholder="項目名稱" style="margin-bottom:10px;">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px;"><input type="number" id="b-price" placeholder="單價 (¥)"><input type="number" id="b-qty" placeholder="數量"></div>
+            <button onclick="addBudget()" class="btn-main" style="background:var(--cat-green)">加入清單 🐟</button>
+        </div>
+    </div>
+
+    <div id="page-daily" class="page">
+        <h2 class="text-center">✍️ 支出記帳</h2>
+        <div class="cat-card">
+            <select id="exp-trip" style="margin-bottom:15px;"></select>
+            <select id="exp-cate" style="margin-bottom:10px;">
+                <option value="飲食">🍽️ 飲食</option><option value="住宿">🏠 住宿</option><option value="交通">🚃 交通</option><option value="購物">🎁 購物</option><option value="其他">🌀 其他</option>
+            </select>
+            <textarea id="exp-note" placeholder="詳細購買清單..."></textarea>
+            <div class="input-grid" style="margin-top:10px;"><input type="number" id="exp-amt" placeholder="金額"><select id="exp-acc"><option value="j2">環島日幣 (¥)</option><option value="t2">環島台幣 ($)</option><option value="j1">年度日幣 (¥)</option><option value="t1">年度台幣 ($)</option></select></div>
+            <input type="date" id="exp-date">
+            <button onclick="saveExpense()" class="btn-main" style="background:var(--cat-red);">確認支出 🐾</button>
+        </div>
+    </div>
+</div>
+
+<nav class="nav-bar">
+    <button class="nav-item active" onclick="showPage('home', this)"><span class="nav-icon">🏠</span><div class="nav-text">主頁</div></button>
+    <button class="nav-item" onclick="showPage('trips', this)"><span class="nav-icon">📊</span><div class="nav-text">日誌</div></button>
+    <button class="nav-item" onclick="showPage('budget', this)"><span class="nav-icon">🗾</span><div class="nav-text">規劃</div></button>
+    <button class="nav-item" onclick="showPage('daily', this)"><span class="nav-icon">✍️</span><div class="nav-text">記帳</div></button>
+</nav>
+
+<script>
+    const START_DATE_FIXED = new Date(2026, 0, 1), END_DATE_FIXED = new Date(2035, 9, 1);
+    const DB_KEY = 'trip_2035_final_v12';
+
+    let store = JSON.parse(localStorage.getItem(DB_KEY)) || {
+        balances: { t1:0, j1:0, t2:0, j2:0 },
+        annualGoals: { t1: 108000, j1: 500000 },
+        fxRate: 0.22,
+        budgetItems: [],
+        trips: []
+    };
+
+    function save() { localStorage.setItem(DB_KEY, JSON.stringify(store)); }
+
+    function showPage(pId, el) {
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        document.getElementById('page-' + pId).classList.add('active');
+        if(el) el.classList.add('active');
+        if(pId === 'home') renderHome();
+        if(pId === 'trips') { initTripSelects(); renderTripLog(); }
+        if(pId === 'budget') renderBudgetBook();
+        if(pId === 'daily') initDailySelects();
+    }
+
+    function renderHome() {
+        const now = new Date();
+        const mLeft = Math.max(0, (END_DATE_FIXED.getFullYear() - now.getFullYear()) * 12 + (END_DATE_FIXED.getMonth() - now.getMonth()));
+        document.getElementById('mLeft').innerText = mLeft;
+        document.getElementById('showRate').innerText = store.fxRate;
+        const totalJPYBudget = store.budgetItems.reduce((s,i) => s + (i.price * i.qty), 0);
+        const goalJ2 = Math.round(totalJPYBudget * 0.5), goalT2 = Math.round((totalJPYBudget * 0.5) * store.fxRate);
+        const totalTWD = store.balances.t1 + store.balances.t2 + (store.balances.j1 + store.balances.j2) * store.fxRate;
+        document.getElementById('totalAssets').innerText = `$ ${Math.round(totalTWD).toLocaleString()}`;
+        const configs = [
+            { id:'t1', name:'年度台幣', goal: store.annualGoals.t1, u:'$', cyc:12, pass: now.getMonth()+1 },
+            { id:'j1', name:'年度日幣', goal: store.annualGoals.j1, u:'¥', cyc:12, pass: now.getMonth()+1 },
+            { id:'t2', name:'環島台(ib)', goal: goalT2, u:'$', cyc:117, pass: Math.max(1,(now.getFullYear()-2026)*12+now.getMonth()+1) },
+            { id:'j2', name:'環島日(現)', goal: goalJ2, u:'¥', cyc:117, pass: Math.max(1,(now.getFullYear()-2026)*12+now.getMonth()+1) }
+        ];
+        const list = document.getElementById('jarList'); list.innerHTML = "";
+        configs.forEach(cfg => {
+            const cur = store.balances[cfg.id], pct = Math.min(Math.round(cur/cfg.goal*100), 100);
+            const monthly = Math.round(cfg.goal / cfg.cyc);
+            const diff = cur - (monthly * cfg.pass);
+            list.innerHTML += `<div class="cat-card" style="padding:12px;">
+                <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:12px;"><span>${cfg.name}</span><span>${cfg.u}${cur.toLocaleString()}</span></div>
+                <div class="prog-container"><div class="prog-fill" style="width:${pct}%; background:${diff>=0?'var(--cat-green)':'var(--cat-main)'}"></div><div class="prog-text">${pct}% (${cfg.u}${cur.toLocaleString()})</div></div>
+                <div style="display:flex; justify-content:space-between; font-size:11px;">
+                    <span>月建議: ${cfg.u}${monthly.toLocaleString()}</span>
+                    <span style="color:${diff>=0?'#27ae60':'#e74c3c'}; font-weight:bold;">${diff>=0?'✓領先':'落後'} ${cfg.u}${Math.abs(diff).toLocaleString()}</span>
+                </div></div>`;
+        });
+    }
+
+    function renderTripLog() {
+        const tid = document.getElementById('view-trip-select').value;
+        const q = document.getElementById('log-search').value.toLowerCase().trim();
+        if(!tid) return;
+        const trip = store.trips.find(t => t.id == tid);
+        const today = new Date(); today.setHours(0,0,0,0);
+        const start = new Date(trip.start), end = new Date(trip.end);
+        const totalDays = Math.max(1, Math.ceil((end - start) / 86400000) + 1);
+        let daysPassed = Math.ceil((today - start) / 86400000) + 1;
+        if(daysPassed < 1) daysPassed = 1; else if(daysPassed > totalDays) daysPassed = totalDays;
+
+        let html = `<div class="cat-card" style="background:#f0f7ff; border-color:var(--cat-blue)">
+            <div style="display:flex; justify-content:space-between;"><strong>📍 ${trip.name}</strong><button onclick="deleteTripSet('${trip.id}')" style="background:none; border:none; color:red; font-size:12px;">[刪除行程]</button></div>
+            <div style="font-size:11px; color:#555;">📅 ${trip.start} ~ ${trip.end} (${totalDays}天)</div>
+            <div style="font-size:12px; font-weight:bold; margin-top:10px;">⭐ 今日可用額度 (第 ${daysPassed} 天)</div>`;
+
+        for(let cat in trip.categoryBudgets) {
+            const goal = trip.categoryBudgets[cat];
+            if(goal <= 0) continue;
+            const avg = Math.round(goal / totalDays);
+            const spentUntilYesterday = (trip.logs || []).filter(l => l.cate === cat && new Date(l.date) < today).reduce((s,l)=>s+l.amt, 0);
+            const yestBal = (avg * (daysPassed - 1)) - spentUntilYesterday;
+            const todayAllowed = avg + yestBal;
+
+            html += `<div class="budget-box">
+                <div class="budget-title"><span>${cat}</span><small>平均 ¥${avg}/日</small></div>
+                <div class="budget-detail"><span>昨日累計結餘:</span><span class="${yestBal>=0?'pos':'neg'}">${yestBal>=0?'+':''}${yestBal.toLocaleString()}</span><span>今日基礎額度:</span><span>+ ${avg.toLocaleString()}</span></div>
+                <div class="budget-result"><strong>今日可用總額:</strong><span class="allowance-amt ${todayAllowed>=0?'pos':'neg'}">¥ ${todayAllowed.toLocaleString()}</span></div>
+            </div>`;
+        }
+        document.getElementById('active-trip-status').innerHTML = html + `</div>`;
+
+        const logs = (trip.logs || []).filter(l => 
+            l.note.toLowerCase().includes(q) || 
+            l.cate.toLowerCase().includes(q) ||
+            l.date.includes(q)
+        ).sort((a,b) => new Date(b.date) - new Date(a.date));
+
+        const logContainer = document.getElementById('active-trip-logs');
+        if (logs.length === 0) {
+            logContainer.innerHTML = `<div class="no-result">🔍 找不到相關紀錄喵...</div>`;
+        } else {
+            logContainer.innerHTML = logs.map((l) => `
+                <div class="log-item">
+                    <div class="log-header"><span>${l.date} [${l.cate}]</span><span>${l.amt.toLocaleString()}</span></div>
+                    <button class="log-del" onclick="deleteLogItem('${trip.id}', ${l.id})">×</button>
+                    <div class="log-note">${l.note}</div>
+                </div>`).join('');
+        }
+    }
+
+    function deleteLogItem(tripId, logId) {
+        if(!confirm("確定要刪除這筆記帳嗎？")) return;
+        const trip = store.trips.find(t => t.id == tripId);
+        const logIdx = trip.logs.findIndex(l => l.id == logId);
+        if(logIdx > -1) {
+            const log = trip.logs[logIdx];
+            store.balances[log.acc] += log.amt; 
+            trip.logs.splice(logIdx, 1);
+            save();
+            renderTripLog();
+            renderHome();
+        }
+    }
+
+    function initTripSelects() { document.getElementById('view-trip-select').innerHTML = store.trips.map(t => `<option value="${t.id}">${t.name}</option>`).join(''); }
+    function saveSavings() { ['t1','j1','t2','j2'].forEach(id => store.balances[id] += Number(document.getElementById('in_'+id).value) || 0); save(); renderHome(); ['t1','j1','t2','j2'].forEach(id => document.getElementById('in_'+id).value = ""); }
+    function renderBudgetBook() {
+        const area = document.getElementById('budgetList'); area.innerHTML = ""; let total = 0;
+        store.budgetItems.forEach((item, idx) => { const sub = item.price * item.qty; total += sub; area.innerHTML += `<div class="rolling-row"><div>${item.name}<br><small>¥${item.price}x${item.qty}</small></div><div>¥${sub.toLocaleString()} <span onclick="delBud(${idx})" style="color:red;cursor:pointer;">×</span></div></div>`; });
+        const splitJ = Math.round(total * 0.5), splitT = Math.round(splitJ * store.fxRate);
+        area.innerHTML += `<div style="margin-top:15px; padding:12px; background:#fff3e0; border-radius:10px; font-size:13px; border:1px solid #ffcc80;"><div style="color:#e65100; font-weight:bold;">日幣總計：¥${total.toLocaleString()}</div><hr style="border:0; border-top:1px dashed #ffcc80; margin:8px 0;"><div style="display:flex; justify-content:space-between;"><span>環島日幣 (50%):</span><strong>¥${splitJ.toLocaleString()}</strong></div><div style="display:flex; justify-content:space-between;"><span>環島台幣 (50%):</span><strong>$${splitT.toLocaleString()}</strong></div></div>`;
+    }
+    function addBudget() { const n=document.getElementById('b-name').value, p=Number(document.getElementById('b-price').value), q=Number(document.getElementById('b-qty').value); if(n && p) { store.budgetItems.push({name:n, price:p, qty:q}); save(); renderBudgetBook(); } }
+    function delBud(idx) { store.budgetItems.splice(idx,1); save(); renderBudgetBook(); }
+    function initDailySelects() { document.getElementById('exp-trip').innerHTML = store.trips.map(t => `<option value="${t.id}">${t.name}</option>`).join(''); document.getElementById('exp-date').valueAsDate = new Date(); }
+    function saveExpense() {
+        const tid = document.getElementById('exp-trip').value, aid = document.getElementById('exp-acc').value, amt = Number(document.getElementById('exp-amt').value), note = document.getElementById('exp-note').value, cate = document.getElementById('exp-cate').value, date = document.getElementById('exp-date').value;
+        if(!tid || !amt) return alert("填寫金額");
+        const trip = store.trips.find(t => t.id == tid);
+        trip.logs.unshift({ id:Date.now(), note, amt, acc:aid, date, cate });
+        store.balances[aid] -= amt; save(); alert("儲存成功！"); showPage('trips');
+    }
+    function saveNewTrip() {
+        const name = document.getElementById('nt_name').value, s = document.getElementById('nt_start').value, e = document.getElementById('nt_end').value;
+        if(!name || !s || !e) return alert("請填寫名稱與日期");
+        const categoryBudgets = {}; document.querySelectorAll('.cat-goal').forEach(inp => categoryBudgets[inp.dataset.cat] = Number(inp.value) || 0);
+        store.trips.push({ id:Date.now().toString(), name, start:s, end:e, categoryBudgets, logs:[] });
+        save(); closeModal('tripModal'); renderTripLog();
+    }
+    function deleteTripSet(tid) { if(confirm("確定刪除此行程？資料無法復原喔！")) { store.trips = store.trips.filter(t => t.id !== tid); save(); renderTripLog(); } }
+    function openModal(id) { if(id==='settingsModal') { document.getElementById('set_rate').value=store.fxRate; document.getElementById('set_t1_goal').value=store.annualGoals.t1; document.getElementById('set_j1_goal').value=store.annualGoals.j1; } document.getElementById(id).style.display = 'flex'; }
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+    function updateSettings() { store.fxRate = Number(document.getElementById('set_rate').value); store.annualGoals.t1 = Number(document.getElementById('set_t1_goal').value); store.annualGoals.j1 = Number(document.getElementById('set_j1_goal').value); save(); closeModal('settingsModal'); renderHome(); }
+    function exportData() { const blob = new Blob([JSON.stringify(store)], {type: "application/json"}); const dl = document.createElement('a'); dl.href = URL.createObjectURL(blob); dl.download = `2035備份.json`; dl.click(); }
+    function importData(e) { const f = e.target.files[0]; if(!f) return; const r = new FileReader(); r.onload = (ev) => { store = JSON.parse(ev.target.result); save(); location.reload(); }; r.readAsText(f); }
+    window.onload = () => { renderHome(); };
+</script>
+</body>
+</html>
